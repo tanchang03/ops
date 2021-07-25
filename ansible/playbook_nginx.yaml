@@ -1,0 +1,40 @@
+---
+- hosts: 192.168.2.21,192.168.2.22 # 主机列表，也可以是/etc/ansible/hosts中定义的主机分组名
+  remote_user: root # 远程用户
+  vars:             # 自定义变量
+     version: 1.16.1
+  vars_files:
+     - ./nginx_locations_vars.yaml
+
+
+  tasks:
+     - name: install dependencies          # 定义任务的名称
+       yum: name={{item}} state=installed  # 调用模块，具体要做的事情，这里使用with_items迭代多个yum任务安装必要的依赖
+       with_items:
+          - make
+          - gcc
+          - gcc-c++
+          - pcre
+          - pcre-devel
+          - zlib
+          - zlib-devel
+          - openssl
+          - openssl-devel
+     - name: download nginx                # 通过get_url模块下载nginx
+       get_url: url=http://nginx.org/download/nginx-{{version}}.tar.gz dest=/tmp/ mode=0755 force=no
+     - name: unarchive                     # 通过unarchive模块解压nginx
+       unarchive: src=/tmp/nginx-{{version}}.tar.gz dest=/tmp/ mode=0755 copy=no
+     - name: clean target 
+       file: path=/usr/local/nginx state=absent
+     - name: configure,make and install    # 通过shell模块执行shell命令编译安装
+       shell: cd /tmp/nginx-{{version}} && ./configure --prefix=/usr/local/nginx && make && make install
+     - name: start nginx                   # 通过shell模块执行shell命令启动nginx
+       shell: /usr/local/nginx/sbin/nginx
+     - name: update config                 # 通过template模块动态生成配置文件下发到远程主机目录
+       template: src=nginx.conf.j2 dest=/usr/local/nginx/conf/nginx.conf
+       notify: reload nginx                # 在结束时触发一个操作，具体操作通过handlers来定义
+       tags: reload                        # 对任务定义一个标签，运行时通过-t执行带指定标签的任务
+
+  handlers:
+     - name: reload nginx                  # 与notify定义的内容对应
+       shell: /usr/local/nginx/sbin/nginx -s reload

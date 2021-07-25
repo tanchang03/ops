@@ -1,0 +1,12 @@
+---
+- name: play1
+  hosts: 192.168.2.22
+  remote_user: root
+  gather_facts: false
+  vars:
+    daemonize: daemonize yes
+  tasks:
+    - name: user template to config redis
+      template: src=/root/redis.conf dest=/usr/local/redis-repl/6379/6379.conf
+    - name: to restart redis
+      shell: /usr/bin/sh /etc/init.d/redis_6379 start
