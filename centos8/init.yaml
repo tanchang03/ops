@@ -1,0 +1,9 @@
+# 设置yum 、关闭linxu 安全、关闭防火墙
+# ansible-playbook ./init.yaml
+- hosts: ss02
+  remote_user: root
+
+  tasks:
+    - name: init env
+      script: ./pre_setup.sh
+
